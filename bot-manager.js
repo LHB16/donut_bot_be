@@ -10,6 +10,11 @@ const latestBedrockVersion = mcData.versions.bedrock && mcData.versions.bedrock[
   : '1.26.20';
 
 
+function cleanMinecraftColors(text) {
+  if (typeof text !== 'string') return text;
+  return text.replace(/§./g, '');
+}
+
 class BotManager extends EventEmitter {
   constructor(config, logCallback) {
     super();
@@ -180,14 +185,15 @@ class BotManager extends EventEmitter {
       // 5. Lắng nghe tin nhắn chat từ server
       this.client.on('text', (packet) => {
         // Lọc hiển thị tin nhắn chat trên Web UI
-        let sender = packet.source_name || 'Hệ thống';
-        let message = packet.message;
+        let sender = cleanMinecraftColors(packet.source_name || 'Hệ thống');
+        let message = cleanMinecraftColors(packet.message);
         
         if (packet.type === 'chat') {
           this.log(`[Chat] <${sender}>: ${message}`, 'chat');
         } else if (packet.type === 'translation') {
           // Tin nhắn dịch thuật từ game (thường là tin nhắn hệ thống như người chơi join/leave)
-          this.log(`[Hệ thống]: ${packet.message} ${JSON.stringify(packet.parameters || [])}`, 'system');
+          const params = (packet.parameters || []).map(p => typeof p === 'string' ? cleanMinecraftColors(p) : p);
+          this.log(`[Hệ thống]: ${message} ${JSON.stringify(params)}`, 'system');
         } else {
           // Các loại tin nhắn khác (system, tip, v.v.)
           this.log(`[Thông báo]: ${message}`, 'system');
@@ -196,7 +202,7 @@ class BotManager extends EventEmitter {
 
       // 6. Lắng nghe khi bị server kick
       this.client.on('kick', (packet) => {
-        const reason = packet.message || 'Không rõ lý do';
+        const reason = cleanMinecraftColors(packet.message || 'Không rõ lý do');
         this.log(`Bot bị server KICK! Lý do: ${reason}`, 'error');
         this.handleDisconnect();
       });
@@ -322,17 +328,33 @@ class BotManager extends EventEmitter {
     }
 
     try {
-      this.client.write('text', {
-        type: 'chat',
-        needs_translation: false,
-        source_name: this.client.username || this.config.username,
-        message: message,
-        xuid: '',
-        platform_chat_id: ''
-      });
-      this.log(`[Gửi tin AFK]: ${message}`, 'success');
+      if (message.startsWith('/')) {
+        // Gửi dưới dạng command_request chuẩn của Bedrock protocol
+        this.client.write('command_request', {
+          command: message,
+          origin: {
+            type: 'player',
+            uuid: '00000000-0000-0000-0000-000000000000',
+            request_id: ''
+          },
+          internal: false,
+          version: 0
+        });
+        this.log(`[Gửi lệnh AFK]: ${message}`, 'success');
+      } else {
+        // Gửi dưới dạng tin nhắn chat thông thường
+        this.client.write('text', {
+          type: 'chat',
+          needs_translation: false,
+          source_name: this.client.username || this.config.username,
+          message: message,
+          xuid: '',
+          platform_chat_id: ''
+        });
+        this.log(`[Gửi tin AFK]: ${message}`, 'success');
+      }
     } catch (err) {
-      this.log(`Lỗi khi gửi tin nhắn chat: ${err.message}`, 'error');
+      this.log(`Lỗi khi gửi: ${err.message}`, 'error');
     }
   }
 
