@@ -335,10 +335,11 @@ class BotManager extends EventEmitter {
           origin: {
             type: 'player',
             uuid: '00000000-0000-0000-0000-000000000000',
-            request_id: ''
+            request_id: '',
+            player_entity_id: 0n
           },
           internal: false,
-          version: 0
+          version: '0'
         });
         this.log(`[Gửi lệnh AFK]: ${message}`, 'success');
       } else {
