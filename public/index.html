@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Donut Bedrock AFK Bot Dashboard</title>
+  <!-- Google Fonts: Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  <!-- Style CSS -->
+  <link rel="stylesheet" href="style.css">
+  <!-- Lucide Icons CDN (Chỉ sử dụng thư viện lucide tối giản) -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <!-- Hạt ánh sáng chuyển động nền mờ ảo (Premium Aurora Background) -->
+  <div class="aurora aurora-1"></div>
+  <div class="aurora aurora-2"></div>
+  <div class="aurora aurora-3"></div>
+
+  <!-- MÀN HÌNH ĐĂNG NHẬP (Lớp phủ Glassmorphism) -->
+  <div id="login-overlay" class="overlay hidden">
+    <div class="login-card glass">
+      <div class="login-header">
+        <div class="logo-wrapper">
+          <i data-lucide="shield-alert" class="logo-icon text-indigo"></i>
+        </div>
+        <h2>Hệ thống Bảo mật</h2>
+        <p>Vui lòng nhập mật khẩu Web UI để tiếp tục quản trị Bot AFK</p>
+      </div>
+      <form id="login-form">
+        <div class="input-group">
+          <i data-lucide="lock" class="input-icon"></i>
+          <input type="password" id="web-password" placeholder="Mật khẩu bảo vệ..." required>
+        </div>
+        <div id="login-error" class="error-msg hidden">
+          <i data-lucide="alert-circle" class="err-icon"></i>
+          <span id="error-text">Mật khẩu không khớp, vui lòng thử lại!</span>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">
+          <span>Xác Thực Truy Cập</span>
+          <i data-lucide="arrow-right"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- CONTAINER CHÍNH CỦA ĐỒNG HỒ / DASHBOARD -->
+  <div id="app-container" class="container">
+    <!-- HEADER -->
+    <header class="app-header glass">
+      <div class="header-brand">
+        <div class="brand-logo glass-icon">
+          <i data-lucide="bot" class="text-gradient"></i>
+        </div>
+        <div class="brand-text">
+          <h1>Donut BE Bot</h1>
+          <p>Hệ thống AFK Minecraft Bedrock thông minh</p>
+        </div>
+      </div>
+      <div class="header-status">
+        <div class="status-indicator">
+          <span id="status-led" class="led led-offline"></span>
+          <span id="status-text" class="status-label">Đang Offline</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- KHU VỰC GRID TRANG WEB -->
+    <main class="app-grid">
+      <!-- CỘT TRÁI: CẤU HÌNH BOT (SIDEBAR) -->
+      <section class="grid-col glass panel-config">
+        <div class="panel-header">
+          <i data-lucide="sliders" class="panel-header-icon text-cyan"></i>
+          <h2>Cấu Hình Bot Bedrock</h2>
+        </div>
+        
+        <form id="config-form" class="panel-body">
+          <div class="form-section-title">Kết Nối Máy Chủ</div>
+          
+          <div class="form-group">
+            <label for="host">IP Server (Host)</label>
+            <div class="input-wrapper">
+              <i data-lucide="server" class="field-icon"></i>
+              <input type="text" id="host" placeholder="VD: play.donutsmp.net hoặc local" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="port">Cổng (Port)</label>
+              <div class="input-wrapper">
+                <i data-lucide="hash" class="field-icon"></i>
+                <input type="number" id="port" value="19132" placeholder="19132" required>
+              </div>
+            </div>
+            
+            <div class="form-group flex-1">
+              <label for="offline">Xác thực Microsoft</label>
+              <div class="select-wrapper">
+                <i data-lucide="key" class="field-icon"></i>
+                <select id="offline">
+                  <option value="true">Offline (Crack)</option>
+                  <option value="false">Online (Microsoft Auth)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="username">Tên người chơi của Bot (Username)</label>
+            <div class="input-wrapper">
+              <i data-lucide="user" class="field-icon"></i>
+              <input type="text" id="username" placeholder="DonutAFKBot" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="version">Phiên bản Bedrock (Để trống để tự nhận diện)</label>
+            <div class="input-wrapper">
+              <i data-lucide="tag" class="field-icon"></i>
+              <input type="text" id="version" placeholder="VD: 1.21.130 hoặc để trống">
+            </div>
+          </div>
+
+          <div class="form-section-title">Chế độ AFK & Chống Kick</div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <div class="checkbox-container">
+                <input type="checkbox" id="antiAfk" checked>
+                <label for="antiAfk">Bật xoay camera AFK</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="chatMessage">Tin nhắn / Lệnh gửi định kỳ (Để trống để tắt)</label>
+            <div class="input-wrapper">
+              <i data-lucide="message-square" class="field-icon"></i>
+              <input type="text" id="chatMessage" placeholder="VD: /afk hoặc .">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="antiAfkInterval">Chu kỳ xoay (giây)</label>
+              <input type="number" id="antiAfkInterval" value="15" min="5" placeholder="15">
+            </div>
+            <div class="form-group flex-1">
+              <label for="chatInterval">Chu kỳ gửi chat (giây)</label>
+              <input type="number" id="chatInterval" value="60" min="10" placeholder="60">
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-secondary btn-block">
+              <i data-lucide="save"></i>
+              <span>Lưu Cấu Hình</span>
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- CỘT PHẢI: TERMINAL LOGS & ĐIỀU KHIỂN (MAIN PANEL) -->
+      <section class="grid-col main-panel">
+        <!-- ĐIỀU KHIỂN NHANH (QUICK CONTROLS) -->
+        <div class="control-bar glass">
+          <button id="btn-connect" class="btn btn-connect">
+            <i data-lucide="play" class="btn-icon"></i>
+            <span>BẮT ĐẦU AFK</span>
+          </button>
+          <button id="btn-disconnect" class="btn btn-disconnect" disabled>
+            <i data-lucide="square" class="btn-icon"></i>
+            <span>NGẮT KẾT NỐI</span>
+          </button>
+        </div>
+
+        <!-- TERMINAL LOGS -->
+        <div class="terminal-panel glass">
+          <div class="terminal-header">
+            <div class="terminal-dots">
+              <span class="dot dot-red"></span>
+              <span class="dot dot-yellow"></span>
+              <span class="dot dot-green"></span>
+            </div>
+            <div class="terminal-title">
+              <i data-lucide="terminal" class="term-title-icon"></i>
+              <span>Nhật Ký Bot AFK (Realtime)</span>
+            </div>
+            <div class="terminal-actions">
+              <button id="btn-clear-logs" title="Xóa màn hình log">
+                <i data-lucide="trash-2"></i>
+              </button>
+            </div>
+          </div>
+          
+          <div id="terminal-logs" class="terminal-body">
+            <!-- Logs sẽ tự động đổ vào đây qua websocket -->
+            <div class="log-line log-system">Chào mừng bạn đến với hệ thống Donut Bot Dashboard! Nhấn kết nối để khởi động bot.</div>
+          </div>
+
+          <!-- GỬI TIN NHẮN TRỰC TIẾP -->
+          <div class="terminal-footer">
+            <form id="chat-form" class="chat-input-wrapper">
+              <i data-lucide="send" class="chat-send-icon"></i>
+              <input type="text" id="chat-input" placeholder="Gửi tin nhắn hoặc lệnh trong game trực tiếp (vd: /lobby, /pay)..." disabled>
+              <button type="submit" id="btn-send-chat" class="btn-chat-submit" disabled>Gửi</button>
+            </form>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="app-footer">
+      <p>&copy; 2026 Donut SMP Bot Bedrock Client. Thiết kế bảo mật & hiện đại.</p>
+    </footer>
+  </div>
+
+  <!-- Socket.io client JS -->
+  <script src="/socket.io/socket.io.js"></script>
+  <!-- App Frontend JS -->
+  <script src="app.js"></script>
+</body>
+</html>

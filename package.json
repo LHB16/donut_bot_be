@@ -1,0 +1,25 @@
+{
+  "name": "donut-bot-be",
+  "version": "1.0.0",
+  "description": "Minecraft Bedrock AFK Bot with Premium Web UI",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "minecraft",
+    "bedrock",
+    "bot",
+    "afk",
+    "web-ui"
+  ],
+  "author": "Antigravity AI",
+  "license": "ISC",
+  "dependencies": {
+    "bedrock-protocol": "3.56.1",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
+  }
+}
