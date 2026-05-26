@@ -83,6 +83,11 @@ const botManager = new BotManager(botConfig, (logObj) => {
 // Phục vụ tệp tĩnh trong thư mục public
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Health check endpoint cho Render (hoặc các PaaS khác)
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', uptime: process.uptime() });
+});
+
 // Middleware xác thực bảo mật kết nối WebSocket
 io.use((socket, next) => {
   // Nếu server không cấu hình mật khẩu, cho phép kết nối thoải mái
@@ -165,11 +170,11 @@ botManager.on('msaCode', (data) => {
   io.to('authenticated').emit('msa_code', data);
 });
 
-// Chạy server lắng nghe cổng cấu hình
-server.listen(PORT, () => {
+// Chạy server lắng nghe cổng cấu hình - bind 0.0.0.0 để Render/PaaS route traffic từ bên ngoài
+server.listen(PORT, '0.0.0.0', () => {
   console.log('\x1b[32m%s\x1b[0m', '==================================================');
   console.log('\x1b[32m%s\x1b[0m', ` 🚀 Minecraft Bedrock AFK Bot Web Server đang chạy!`);
-  console.log('\x1b[32m%s\x1b[0m', ` 🌐 Web UI: http://localhost:${PORT}`);
+  console.log('\x1b[32m%s\x1b[0m', ` 🌐 Web UI: http://0.0.0.0:${PORT}`);
   if (WEB_PASSWORD) {
     console.log('\x1b[33m%s\x1b[0m', ` 🔒 Chế độ bảo mật: BẬT (Mật khẩu được yêu cầu)`);
   } else {
