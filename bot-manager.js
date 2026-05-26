@@ -25,9 +25,7 @@ class BotManager extends EventEmitter {
     this.userDisconnected = false; // Người dùng chủ động ngắt kết nối hay không
     this.reconnectTimer = null;
     
-    // Các khoảng thời gian cho Anti-AFK
-    this.antiAfkTimer = null;
-    this.chatTimer = null;
+
     this.keepAliveTimer = null;
 
     // Tọa độ và hướng nhìn hiện tại của Bot nhận được từ server
@@ -140,8 +138,6 @@ class BotManager extends EventEmitter {
         
         // Luôn khởi động keep-alive cơ bản để giữ kết nối ổn định
         this.startKeepAlive();
-        // Khởi động Anti-AFK nếu được bật trong cấu hình
-        this.startAntiAfk();
       });
 
       // Tự động phản hồi gói tin network_stack_latency để tránh bị hệ thống bảo mật kick
@@ -288,37 +284,7 @@ class BotManager extends EventEmitter {
     // Không gửi player_auth_input để tránh lệch tick (desync) với server
   }
 
-  // ============================================================
-  // ANTI-AFK (tùy chọn, xoay camera nhẹ + gửi chat định kỳ)
-  // ============================================================
-  startAntiAfk() {
-    if (!this.config.antiAfk) return;
 
-    this.log('Bắt đầu chạy cơ chế Anti-AFK (xoay camera + chat định kỳ)...', 'info');
-
-    // Vòng lặp xoay camera nhẹ nhàng (Không di chuyển tọa độ để bám sát yêu cầu đứng đúng 1 chỗ)
-    const antiAfkInterval = parseInt(this.config.antiAfkInterval) || 15000;
-    let yawOffset = 1.0; // Độ lệch xoay
-
-    this.antiAfkTimer = setInterval(() => {
-      if (this.status !== 'online' || !this.client || !this.isSpawned) return;
-
-      // Xoay nhẹ Yaw qua lại để server thấy camera của Bot chuyển động
-      this.rotation.yaw = (this.rotation.yaw + yawOffset) % 360;
-      this.rotation.headYaw = this.rotation.yaw;
-      yawOffset = -yawOffset; // Đảo chiều cho lần xoay tiếp theo (giúp bot đứng yên hoàn toàn góc cũ)
-    }, antiAfkInterval);
-
-    // Vòng lặp gửi tin nhắn chat / lệnh định kỳ
-    const chatInterval = parseInt(this.config.chatInterval) || 60000;
-    if (chatInterval > 0 && this.config.chatMessage) {
-      this.chatTimer = setInterval(() => {
-        if (this.status !== 'online' || !this.client || !this.isSpawned) return;
-
-        this.sendChatMessage(this.config.chatMessage);
-      }, chatInterval);
-    }
-  }
 
   // Gửi tin nhắn chat hoặc lệnh lên server Minecraft Bedrock
   sendChatMessage(message) {
@@ -361,14 +327,6 @@ class BotManager extends EventEmitter {
 
   // Xóa các vòng lặp timer
   cleanupTimers() {
-    if (this.antiAfkTimer) {
-      clearInterval(this.antiAfkTimer);
-      this.antiAfkTimer = null;
-    }
-    if (this.chatTimer) {
-      clearInterval(this.chatTimer);
-      this.chatTimer = null;
-    }
     if (this.keepAliveTimer) {
       clearInterval(this.keepAliveTimer);
       this.keepAliveTimer = null;
@@ -380,11 +338,10 @@ class BotManager extends EventEmitter {
     this.config = { ...this.config, ...newConfig };
     this.log('Đã cập nhật cấu hình Bot mới.', 'info');
     
-    // Nếu bot đang online, khởi động lại Anti-AFK với chu kỳ cấu hình mới
+    // Nếu bot đang online, khởi động lại cấu hình mới
     if (this.status === 'online') {
       this.cleanupTimers();
       this.startKeepAlive();
-      this.startAntiAfk();
     }
   }
 }

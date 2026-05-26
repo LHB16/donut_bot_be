@@ -17,10 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const portInput = document.getElementById('port');
   const offlineSelect = document.getElementById('offline');
   const usernameInput = document.getElementById('username');
-  const antiAfkCheckbox = document.getElementById('antiAfk');
-  const chatMessageInput = document.getElementById('chatMessage');
-  const antiAfkIntervalInput = document.getElementById('antiAfkInterval');
-  const chatIntervalInput = document.getElementById('chatInterval');
+
   const versionInput = document.getElementById('version');
 
   const btnConnect = document.getElementById('btn-connect');
@@ -106,10 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
         portInput.value = botConfig.port || 19132;
         offlineSelect.value = botConfig.offline ? 'true' : 'false';
         usernameInput.value = botConfig.username || 'DonutAFKBot';
-        antiAfkCheckbox.checked = botConfig.antiAfk !== false;
-        chatMessageInput.value = botConfig.chatMessage || '';
-        antiAfkIntervalInput.value = (botConfig.antiAfkInterval || 15000) / 1000;
-        chatIntervalInput.value = (botConfig.chatInterval || 60000) / 1000;
+
         versionInput.value = botConfig.version || '';
       }
 
@@ -249,10 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
       offline: offlineSelect.value === 'true',
       username: usernameInput.value.trim(),
       version: versionInput.value.trim(),
-      antiAfk: antiAfkCheckbox.checked,
-      chatMessage: chatMessageInput.value.trim(),
-      antiAfkInterval: (parseInt(antiAfkIntervalInput.value) || 15) * 1000,
-      chatInterval: (parseInt(chatIntervalInput.value) || 60) * 1000
+
     };
 
     socket.emit('save_config', newConfig);

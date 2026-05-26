@@ -3,9 +3,5 @@
   "port": 19132,
   "username": ".lhbinh001",
   "offline": false,
-  "antiAfk": false,
-  "antiAfkInterval": 15000,
-  "chatInterval": 60000,
-  "chatMessage": ".",
   "version": ""
 }

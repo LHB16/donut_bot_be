@@ -34,11 +34,7 @@ function loadBotConfig() {
     host: "",
     port: 19132,
     username: "DonutAFKBot",
-    offline: true,
-    antiAfk: true,
-    antiAfkInterval: 15000,
-    chatInterval: 60000,
-    chatMessage: "."
+    offline: true
   };
 }
 
