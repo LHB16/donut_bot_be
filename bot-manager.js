@@ -19,6 +19,7 @@ class BotManager extends EventEmitter {
   constructor(config, logCallback) {
     super();
     this.config = config;
+    this.botId = config.id || 'default-bot';
     this.logCallback = logCallback || (() => {});
     this.client = null;
     this.status = 'offline'; // 'offline', 'connecting', 'online'
@@ -115,70 +116,90 @@ class BotManager extends EventEmitter {
 
       // 1. Sự kiện khi đã hoàn thành handshake và tham gia server
       this.client.on('join', () => {
-        this.log(`Bắt tay thành công với server! Đang tải thế giới...`, 'info');
+        try {
+          this.log(`Bắt tay thành công với server! Đang tải thế giới...`, 'info');
+        } catch (err) {
+          this.log(`Lỗi xử lý sự kiện join: ${err.message}`, 'error');
+        }
       });
 
       // 2. Sự kiện khi thế giới bắt đầu tải (nhận các thông tin cấu hình ban đầu)
       this.client.on('start_game', (packet) => {
-        this.runtimeEntityId = packet.runtime_entity_id;
-        
-        // Lưu vị trí spawn ban đầu của bot
-        if (packet.player_position) {
-          this.position = {
-            x: packet.player_position.x,
-            y: packet.player_position.y,
-            z: packet.player_position.z
-          };
+        try {
+          this.runtimeEntityId = packet.runtime_entity_id;
+          
+          // Lưu vị trí spawn ban đầu của bot
+          if (packet.player_position) {
+            this.position = {
+              x: packet.player_position.x,
+              y: packet.player_position.y,
+              z: packet.player_position.z
+            };
+          }
+          if (packet.rotation) {
+            this.rotation = {
+              pitch: packet.rotation.x || 0,
+              yaw: packet.rotation.y || 0,
+              headYaw: packet.rotation.y || 0
+            };
+          }
+          
+          this.log(`Nhận dữ liệu khởi động game. Runtime ID: ${this.runtimeEntityId}. Tọa độ spawn: (${this.position.x.toFixed(2)}, ${this.position.y.toFixed(2)}, ${this.position.z.toFixed(2)})`, 'info');
+        } catch (err) {
+          this.log(`Lỗi xử lý sự kiện start_game: ${err.message}`, 'error');
         }
-        if (packet.rotation) {
-          this.rotation = {
-            pitch: packet.rotation.x || 0,
-            yaw: packet.rotation.y || 0,
-            headYaw: packet.rotation.y || 0
-          };
-        }
-        
-        this.log(`Nhận dữ liệu khởi động game. Runtime ID: ${this.runtimeEntityId}. Tọa độ spawn: (${this.position.x.toFixed(2)}, ${this.position.y.toFixed(2)}, ${this.position.z.toFixed(2)})`, 'info');
       });
 
       // 3. Sự kiện khi bot spawn thực tế vào thế giới
       this.client.on('spawn', () => {
-        this.isSpawned = true;
-        this.setStatus('online');
-        this.log(`Bot đã spawn vào thế giới thành công! Bắt đầu chạy cơ chế giữ kết nối.`, 'success');
-        
-        // Luôn khởi động keep-alive cơ bản để giữ kết nối ổn định
-        this.startKeepAlive();
+        try {
+          this.isSpawned = true;
+          this.setStatus('online');
+          this.log(`Bot đã spawn vào thế giới thành công! Bắt đầu chạy cơ chế giữ kết nối.`, 'success');
+          
+          // Luôn khởi động keep-alive cơ bản để giữ kết nối ổn định
+          this.startKeepAlive();
 
-        // Tự động chạy lệnh afk/teleport sau 1.5 giây nếu được cấu hình
-        if (this.config.autoCommand && this.config.autoCommand.trim() !== '') {
-          setTimeout(() => {
-            if (this.status === 'online' && this.isSpawned) {
-              this.log(`[Tự động]: Gửi lệnh khởi động AFK: ${this.config.autoCommand}`, 'info');
-              this.sendChatMessage(this.config.autoCommand);
-            }
-          }, 1500);
+          // Tự động chạy lệnh afk/teleport sau 1.5 giây nếu được cấu hình
+          if (this.config.autoCommand && this.config.autoCommand.trim() !== '') {
+            setTimeout(() => {
+              try {
+                if (this.status === 'online' && this.isSpawned) {
+                  this.log(`[Tự động]: Gửi lệnh khởi động AFK: ${this.config.autoCommand}`, 'info');
+                  this.sendChatMessage(this.config.autoCommand);
+                }
+              } catch (err) {
+                this.log(`Lỗi tự động gửi lệnh AFK: ${err.message}`, 'error');
+              }
+            }, 1500);
+          }
+        } catch (err) {
+          this.log(`Lỗi xử lý sự kiện spawn: ${err.message}`, 'error');
         }
       });
 
       // Tự động phản hồi gói tin network_stack_latency để tránh bị hệ thống bảo mật kick
       this.client.on('network_stack_latency', (packet) => {
-        if (packet.needs_response) {
-          const tsVal = packet.timestamp.valueOf();
-          const signedVal = BigInt.asIntN(64, tsVal);
-          const multiplied = signedVal * 1000000n;
-          const responseTimestamp = BigInt.asUintN(64, multiplied);
-          
-          if (this.client) {
-            try {
-              this.client.write('network_stack_latency', {
-                timestamp: responseTimestamp,
-                needs_response: 0
-              });
-            } catch (err) {
-              // Thầm lặng bỏ qua lỗi ghi socket
+        try {
+          if (packet.needs_response) {
+            const tsVal = packet.timestamp.valueOf();
+            const signedVal = BigInt.asIntN(64, tsVal);
+            const multiplied = signedVal * 1000000n;
+            const responseTimestamp = BigInt.asUintN(64, multiplied);
+            
+            if (this.client) {
+              try {
+                this.client.write('network_stack_latency', {
+                  timestamp: responseTimestamp,
+                  needs_response: 0
+                });
+              } catch (err) {
+                // Thầm lặng bỏ qua lỗi ghi socket
+              }
             }
           }
+        } catch (err) {
+          // Bỏ qua lỗi
         }
       });
 
@@ -186,39 +207,56 @@ class BotManager extends EventEmitter {
 
       // 5. Lắng nghe tin nhắn chat từ server
       this.client.on('text', (packet) => {
-        // Lọc hiển thị tin nhắn chat trên Web UI
-        let sender = cleanMinecraftColors(packet.source_name || 'Hệ thống');
-        let message = cleanMinecraftColors(packet.message);
-        
-        if (packet.type === 'chat') {
-          this.log(`[Chat] <${sender}>: ${message}`, 'chat');
-        } else if (packet.type === 'translation') {
-          // Tin nhắn dịch thuật từ game (thường là tin nhắn hệ thống như người chơi join/leave)
-          const params = (packet.parameters || []).map(p => typeof p === 'string' ? cleanMinecraftColors(p) : p);
-          this.log(`[Hệ thống]: ${message} ${JSON.stringify(params)}`, 'system');
-        } else {
-          // Các loại tin nhắn khác (system, tip, v.v.)
-          this.log(`[Thông báo]: ${message}`, 'system');
+        try {
+          // Lọc hiển thị tin nhắn chat trên Web UI
+          let sender = cleanMinecraftColors(packet.source_name || 'Hệ thống');
+          let message = cleanMinecraftColors(packet.message);
+          
+          if (packet.type === 'chat') {
+            this.log(`[Chat] <${sender}>: ${message}`, 'chat');
+          } else if (packet.type === 'translation') {
+            // Tin nhắn dịch thuật từ game (thường là tin nhắn hệ thống như người chơi join/leave)
+            const params = (packet.parameters || []).map(p => typeof p === 'string' ? cleanMinecraftColors(p) : p);
+            this.log(`[Hệ thống]: ${message} ${JSON.stringify(params)}`, 'system');
+          } else {
+            // Các loại tin nhắn khác (system, tip, v.v.)
+            this.log(`[Thông báo]: ${message}`, 'system');
+          }
+        } catch (err) {
+          this.log(`Lỗi xử lý sự kiện text: ${err.message}`, 'error');
         }
       });
 
       // 6. Lắng nghe khi bị server kick
       this.client.on('kick', (packet) => {
-        const reason = cleanMinecraftColors(packet.message || 'Không rõ lý do');
-        this.log(`Bot bị server KICK! Lý do: ${reason}`, 'error');
-        this.handleDisconnect();
+        try {
+          const reason = cleanMinecraftColors(packet.message || 'Không rõ lý do');
+          this.log(`Bot bị server KICK! Lý do: ${reason}`, 'error');
+          this.handleDisconnect();
+        } catch (err) {
+          this.log(`Lỗi xử lý sự kiện kick: ${err.message}`, 'error');
+          this.handleDisconnect();
+        }
       });
 
       // 7. Lắng nghe khi gặp lỗi kết nối
       this.client.on('error', (err) => {
-        this.log(`Lỗi kết nối Bot: ${err.message}`, 'error');
-        // Không gọi handleDisconnect trực tiếp ở đây vì sự kiện close/end sẽ được kích hoạt ngay sau đó
+        try {
+          this.log(`Lỗi kết nối Bot: ${err.message}`, 'error');
+        } catch (innerErr) {
+          // Bỏ qua lỗi
+        }
       });
 
       // 8. Lắng nghe khi kết nối bị đóng hoàn toàn
       this.client.on('close', () => {
-        this.log('Kết nối tới server Minecraft đã bị đóng.', 'warning');
-        this.handleDisconnect();
+        try {
+          this.log('Kết nối tới server Minecraft đã bị đóng.', 'warning');
+          this.handleDisconnect();
+        } catch (err) {
+          this.log(`Lỗi xử lý sự kiện close: ${err.message}`, 'error');
+          this.handleDisconnect();
+        }
       });
 
     } catch (error) {
