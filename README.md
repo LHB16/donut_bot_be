@@ -57,6 +57,22 @@ npm start
 
 ---
 
+## 🔑 Đăng Nhập Tài Khoản Microsoft (Online Mode)
+
+Nếu bạn cấu hình Bot kết nối bằng tài khoản Microsoft bản quyền (**Online Mode** - thiết lập `offline: false` trên Web UI):
+
+1. **Kiểm tra trực tiếp trong Console (Terminal) của ứng dụng:** Tại lần đầu tiên bot kết nối, thư viện `prismarine-auth` sẽ in ra thông báo yêu cầu xác thực thiết bị trong Console của Node.js:
+   ```text
+   To sign in, use a web browser to open the page https://microsoft.com/link and enter the code XXXXXXXX to authenticate.
+   ```
+2. **Thực hiện xác thực:**
+   - Copy mã code gồm 8 ký tự được hiển thị trong Console.
+   - Truy cập đường dẫn [https://microsoft.com/link](https://microsoft.com/link) trên trình duyệt.
+   - Nhập mã code và đăng nhập tài khoản Microsoft chứa game của bạn để cấp quyền truy cập cho bot.
+3. Sau khi xác thực thành công trên trình duyệt, bot sẽ tự động đăng nhập vào server game Minecraft. Lịch sử đăng nhập sẽ được lưu trong thư mục `auth-cache/` để tránh phải đăng nhập lại ở các lần sau.
+
+---
+
 ## ☁️ Hướng Dẫn Deploy Lên Render.com (Treo Bot 24/7 Miễn Phí)
 
 Dưới đây là các bước chi tiết để bạn deploy dự án này lên **Render.com** (dưới dạng một Web Service):
