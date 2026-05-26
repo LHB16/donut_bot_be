@@ -190,6 +190,33 @@
     </footer>
   </div>
 
+  <!-- BANNER XÁC THỰC MICROSOFT (Premium Alert) -->
+  <div id="msa-alert" class="msa-alert glass hidden">
+    <div class="msa-alert-icon">
+      <i data-lucide="key-round" class="text-gradient"></i>
+    </div>
+    <div class="msa-alert-content">
+      <h3>Xác thực Microsoft (Xbox Live)</h3>
+      <p>Nhấp vào liên kết bên dưới và điền mã xác thực thiết bị để bot đăng nhập:</p>
+      <div class="msa-code-box">
+        <span id="msa-code-text" class="msa-code">--------</span>
+        <button id="btn-copy-msa" class="btn-copy" type="button" title="Copy mã xác thực">
+          <i data-lucide="copy"></i>
+        </button>
+      </div>
+      <div class="msa-actions">
+        <a id="msa-link" href="https://microsoft.com/link" target="_blank" class="btn btn-primary">
+          <span>Đến trang đăng nhập</span>
+          <i data-lucide="external-link"></i>
+        </a>
+        <span id="msa-timer" class="msa-timer">Hiệu lực: 180s</span>
+      </div>
+    </div>
+    <button id="btn-close-msa" class="msa-close-btn" type="button" title="Đóng thông báo">
+      <i data-lucide="x"></i>
+    </button>
+  </div>
+
   <!-- Socket.io client JS -->
   <script src="/socket.io/socket.io.js"></script>
   <!-- App Frontend JS -->

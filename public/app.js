@@ -29,6 +29,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const chatInput = document.getElementById('chat-input');
   const btnSendChat = document.getElementById('btn-send-chat');
 
+  // MSA Alert Elements
+  const msaAlert = document.getElementById('msa-alert');
+  const msaCodeText = document.getElementById('msa-code-text');
+  const btnCopyMsa = document.getElementById('btn-copy-msa');
+  const msaLink = document.getElementById('msa-link');
+  const msaTimer = document.getElementById('msa-timer');
+  const btnCloseMsa = document.getElementById('btn-close-msa');
+  let msaCountdownInterval = null;
+
   // Quản lý kết nối Socket.io
   let socket = null;
   let currentPassword = sessionStorage.getItem('web_password') || '';
@@ -141,6 +150,54 @@ document.addEventListener('DOMContentLoaded', () => {
         alert(`Không thể lưu cấu hình: ${result.message}`);
       }
     });
+
+    // Lắng nghe mã xác thực Microsoft
+    socket.on('msa_code', (data) => {
+      const { user_code, verification_uri } = data;
+      
+      // Hiển thị code và cập nhật link
+      msaCodeText.textContent = user_code;
+      msaLink.href = verification_uri;
+      
+      // Kích hoạt hiển thị banner
+      msaAlert.classList.remove('hidden');
+      setTimeout(() => {
+        msaAlert.classList.add('show');
+      }, 50);
+
+      // Cập nhật lại biểu tượng
+      lucide.createIcons();
+
+      // Bắt đầu đếm ngược 3 phút (180 giây)
+      if (msaCountdownInterval) {
+        clearInterval(msaCountdownInterval);
+      }
+      
+      let timeLeft = 180; // 3 phút
+      msaTimer.textContent = `Hiệu lực: ${timeLeft}s`;
+      
+      msaCountdownInterval = setInterval(() => {
+        timeLeft--;
+        msaTimer.textContent = `Hiệu lực: ${timeLeft}s`;
+        
+        if (timeLeft <= 0) {
+          clearInterval(msaCountdownInterval);
+          hideMsaAlert();
+        }
+      }, 1000);
+    });
+  }
+
+  // Hàm ẩn banner xác thực Microsoft
+  function hideMsaAlert() {
+    msaAlert.classList.remove('show');
+    if (msaCountdownInterval) {
+      clearInterval(msaCountdownInterval);
+      msaCountdownInterval = null;
+    }
+    setTimeout(() => {
+      msaAlert.classList.add('hidden');
+    }, 400);
   }
 
   // Cập nhật giao diện trạng thái của Bot
@@ -282,6 +339,31 @@ document.addEventListener('DOMContentLoaded', () => {
       message: 'Đã xóa trắng màn hình nhật ký.',
       type: 'system'
     });
+  });
+
+  // Event Listener cho Xác thực Microsoft
+  btnCopyMsa.addEventListener('click', () => {
+    const code = msaCodeText.textContent;
+    if (code && code !== '--------') {
+      navigator.clipboard.writeText(code).then(() => {
+        // Thay đổi icon tạm thời thành check
+        const copyIcon = btnCopyMsa.querySelector('i');
+        copyIcon.setAttribute('data-lucide', 'check');
+        lucide.createIcons();
+        
+        // Reset lại sau 2 giây
+        setTimeout(() => {
+          copyIcon.setAttribute('data-lucide', 'copy');
+          lucide.createIcons();
+        }, 2000);
+      }).catch(err => {
+        console.error('Không thể copy mã code:', err);
+      });
+    }
+  });
+
+  btnCloseMsa.addEventListener('click', () => {
+    hideMsaAlert();
   });
 
   // Bắt đầu khởi tạo kết nối lần đầu tiên

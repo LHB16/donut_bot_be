@@ -160,6 +160,11 @@ botManager.on('statusChange', (newStatus) => {
   io.to('authenticated').emit('status', newStatus);
 });
 
+// Lắng nghe sự kiện msaCode để gửi về Web UI
+botManager.on('msaCode', (data) => {
+  io.to('authenticated').emit('msa_code', data);
+});
+
 // Chạy server lắng nghe cổng cấu hình
 server.listen(PORT, () => {
   console.log('\x1b[32m%s\x1b[0m', '==================================================');

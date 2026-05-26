@@ -90,7 +90,11 @@ class BotManager extends EventEmitter {
         profilesFolder: path.join(__dirname, 'auth-cache', this.config.username || 'DonutAFKBot'),
         connectTimeout: 30000, // 30 giây để xử lý server lag hoặc bắt tay RakNet chậm qua proxy
         skipPing: true, // Bỏ qua bước Ping dò phiên bản để tránh bị Cloudflare/firewall chặn UDP
-        version: this.config.version || latestBedrockVersion // Chỉ định phiên bản cố định, tránh dò tự động
+        version: this.config.version || latestBedrockVersion, // Chỉ định phiên bản cố định, tránh dò tự động
+        onMsaCode: (data) => {
+          this.log(`[Xác thực Microsoft]: ${data.message}`, 'warning');
+          this.emit('msaCode', data);
+        }
       };
 
       // Nếu không dùng chế độ Offline (yêu cầu Xbox Live Auth)
