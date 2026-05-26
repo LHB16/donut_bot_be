@@ -64,6 +64,13 @@ class BotManager extends EventEmitter {
     this.setStatus('connecting');
     this.isSpawned = false;
     this.tick = 0n;
+
+    // Kiểm tra host không được để trống
+    if (!this.config.host || this.config.host.trim() === '') {
+      this.log('Lỗi: Chưa cấu hình IP Server (Host). Vui lòng điền IP Server trên Web UI trước khi kết nối!', 'error');
+      this.setStatus('offline');
+      return;
+    }
     
     this.log(`Bắt đầu kết nối tới server ${this.config.host}:${this.config.port}...`, 'info');
 

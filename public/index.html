@@ -14,14 +14,9 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
-  <!-- Hạt ánh sáng chuyển động nền mờ ảo (Premium Aurora Background) -->
-  <div class="aurora aurora-1"></div>
-  <div class="aurora aurora-2"></div>
-  <div class="aurora aurora-3"></div>
-
-  <!-- MÀN HÌNH ĐĂNG NHẬP (Lớp phủ Glassmorphism) -->
+  <!-- MÀN HÌNH ĐĂNG NHẬP -->
   <div id="login-overlay" class="overlay hidden">
-    <div class="login-card glass">
+    <div class="login-card">
       <div class="login-header">
         <div class="logo-wrapper">
           <i data-lucide="shield-alert" class="logo-icon text-indigo"></i>
@@ -49,7 +44,7 @@
   <!-- CONTAINER CHÍNH CỦA ĐỒNG HỒ / DASHBOARD -->
   <div id="app-container" class="container">
     <!-- HEADER -->
-    <header class="app-header glass">
+    <header class="app-header">
       <div class="header-brand">
         <div class="brand-logo glass-icon">
           <i data-lucide="bot" class="text-gradient"></i>
@@ -137,7 +132,7 @@
       <!-- CỘT PHẢI: TERMINAL LOGS & ĐIỀU KHIỂN (MAIN PANEL) -->
       <section class="grid-col main-panel">
         <!-- ĐIỀU KHIỂN NHANH (QUICK CONTROLS) -->
-        <div class="control-bar glass">
+        <div class="control-bar">
           <button id="btn-connect" class="btn btn-connect">
             <i data-lucide="play" class="btn-icon"></i>
             <span>BẮT ĐẦU AFK</span>
@@ -149,7 +144,7 @@
         </div>
 
         <!-- TERMINAL LOGS -->
-        <div class="terminal-panel glass">
+        <div class="terminal-panel">
           <div class="terminal-header">
             <div class="terminal-dots">
               <span class="dot dot-red"></span>
