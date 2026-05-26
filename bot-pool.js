@@ -1,14 +1,17 @@
-const BotManager = require('./bot-manager');
+const { Worker } = require('worker_threads');
+const path = require('path');
+
+const WORKER_PATH = path.join(__dirname, 'bot-worker.js');
 
 class BotPool {
   constructor({ onLog, onStatus, onMsaCode }) {
-    this.bots = new Map();
+    this.bots = new Map(); // botId -> { worker, status, config }
     this.onLog = onLog || (() => {});
     this.onStatus = onStatus || (() => {});
     this.onMsaCode = onMsaCode || (() => {});
   }
 
-  // Thêm một bot mới vào pool
+  // Thêm một bot mới vào pool (chỉ lưu config, chưa spawn worker)
   addBot(botId, config) {
     if (this.bots.has(botId)) {
       this.onLog(botId, {
@@ -16,33 +19,101 @@ class BotPool {
         message: `[System] Bot ${botId} đã tồn tại trong hệ thống.`,
         type: 'warning'
       });
-      return this.bots.get(botId);
+      return;
     }
 
-    const bot = new BotManager(config, (logObj) => {
-      this.onLog(botId, logObj);
+    this.bots.set(botId, { worker: null, status: 'offline', config });
+  }
+
+  // Spawn Worker Thread cho bot, trả về Promise resolve khi worker ready
+  _spawnWorker(botId) {
+    const botData = this.bots.get(botId);
+    if (!botData) return null;
+
+    // Terminate worker cũ nếu còn sót
+    if (botData.worker) {
+      try { botData.worker.terminate(); } catch (e) {}
+      botData.worker = null;
+    }
+
+    const worker = new Worker(WORKER_PATH, {
+      workerData: { botId, config: botData.config }
     });
 
-    bot.on('statusChange', (newStatus) => {
-      this.onStatus(botId, newStatus);
+    // Lắng nghe message từ worker
+    worker.on('message', (msg) => {
+      // Kiểm tra botData còn tồn tại không (có thể đã bị remove)
+      const currentBot = this.bots.get(botId);
+      if (!currentBot) return;
+
+      switch (msg.type) {
+        case 'log':
+          this.onLog(botId, msg.logObj);
+          break;
+        case 'status':
+          currentBot.status = msg.status;
+          this.onStatus(botId, msg.status);
+          break;
+        case 'msaCode':
+          this.onMsaCode(botId, msg.data);
+          break;
+        case 'ready':
+          // Worker đã khởi tạo xong BotManager
+          break;
+      }
     });
 
-    bot.on('msaCode', (data) => {
-      this.onMsaCode(botId, data);
+    // Worker gặp lỗi runtime → log và đánh offline, KHÔNG crash main thread
+    worker.on('error', (err) => {
+      console.error(`[Worker ${botId}] Error:`, err.message);
+      const currentBot = this.bots.get(botId);
+      if (currentBot) {
+        this.onLog(botId, {
+          timestamp: new Date().toLocaleTimeString(),
+          message: `[Worker] Luồng bot gặp lỗi: ${err.message}. Web Server vẫn hoạt động bình thường.`,
+          type: 'error'
+        });
+        currentBot.status = 'offline';
+        this.onStatus(botId, 'offline');
+        currentBot.worker = null;
+      }
     });
 
-    this.bots.set(botId, bot);
-    return bot;
+    // Worker thoát (crash hoặc bị terminate)
+    worker.on('exit', (code) => {
+      const currentBot = this.bots.get(botId);
+      if (!currentBot) return;
+
+      if (code !== 0 && code !== null) {
+        console.error(`[Worker ${botId}] Exited with code ${code}`);
+        this.onLog(botId, {
+          timestamp: new Date().toLocaleTimeString(),
+          message: `[Worker] Luồng bot đã dừng bất thường (code: ${code}). Web Server vẫn hoạt động bình thường.`,
+          type: 'warning'
+        });
+      }
+      currentBot.status = 'offline';
+      this.onStatus(botId, 'offline');
+      currentBot.worker = null;
+    });
+
+    botData.worker = worker;
+    return worker;
   }
 
   // Xóa bot khỏi pool
   removeBot(botId) {
-    const bot = this.bots.get(botId);
-    if (bot) {
-      try {
-        bot.disconnect();
-      } catch (err) {
-        console.error(`Lỗi khi ngắt kết nối bot ${botId}:`, err.message);
+    const botData = this.bots.get(botId);
+    if (botData) {
+      if (botData.worker) {
+        try {
+          botData.worker.postMessage({ action: 'disconnect' });
+        } catch (e) {}
+        // Cho bot 2 giây để ngắt kết nối sạch, sau đó terminate worker
+        const w = botData.worker;
+        setTimeout(() => {
+          try { w.terminate(); } catch (e) {}
+        }, 2000);
       }
       this.bots.delete(botId);
       return true;
@@ -50,50 +121,67 @@ class BotPool {
     return false;
   }
 
-  // Bắt đầu kết nối cho bot
+  // Bắt đầu kết nối cho bot → spawn worker mới nếu chưa có
   async startBot(botId) {
-    const bot = this.bots.get(botId);
-    if (bot) {
-      await bot.connect();
-    } else {
-      throw new Error(`Không tìm thấy bot với ID: ${botId}`);
+    const botData = this.bots.get(botId);
+    if (!botData) throw new Error(`Không tìm thấy bot với ID: ${botId}`);
+
+    // Spawn worker mới nếu chưa có hoặc đã bị terminate
+    if (!botData.worker) {
+      this._spawnWorker(botId);
     }
+
+    // Gửi lệnh connect sang worker thread
+    botData.worker.postMessage({ action: 'connect' });
   }
 
-  // Dừng bot
+  // Dừng bot → gửi lệnh disconnect, terminate worker
   stopBot(botId) {
-    const bot = this.bots.get(botId);
-    if (bot) {
-      bot.disconnect();
+    const botData = this.bots.get(botId);
+    if (botData && botData.worker) {
+      botData.worker.postMessage({ action: 'disconnect' });
+      // Terminate worker sau 2 giây để giải phóng luồng hoàn toàn
+      const w = botData.worker;
+      setTimeout(() => {
+        try { w.terminate(); } catch (e) {}
+      }, 2000);
+      botData.worker = null;
     }
   }
 
   // Gửi tin nhắn chat/lệnh
   sendChat(botId, message) {
-    const bot = this.bots.get(botId);
-    if (bot && bot.status === 'online') {
-      bot.sendChatMessage(message);
+    const botData = this.bots.get(botId);
+    if (botData && botData.worker && botData.status === 'online') {
+      botData.worker.postMessage({ action: 'sendChat', message });
     }
   }
 
   // Cập nhật cấu hình bot
   updateConfig(botId, config) {
-    const bot = this.bots.get(botId);
-    if (bot) {
-      bot.updateConfig(config);
+    const botData = this.bots.get(botId);
+    if (botData) {
+      botData.config = { ...botData.config, ...config };
+      if (botData.worker) {
+        botData.worker.postMessage({ action: 'updateConfig', config });
+      }
     }
   }
 
-  // Lấy thông tin 1 bot instance
+  // Lấy thông tin 1 bot (trả về object có .status để tương thích server.js)
   getBot(botId) {
-    return this.bots.get(botId);
+    const botData = this.bots.get(botId);
+    if (botData) {
+      return { status: botData.status };
+    }
+    return undefined;
   }
 
   // Lấy trạng thái của tất cả bot
   getAllStatuses() {
     const statuses = {};
-    for (const [botId, bot] of this.bots.entries()) {
-      statuses[botId] = bot.status;
+    for (const [botId, botData] of this.bots.entries()) {
+      statuses[botId] = botData.status;
     }
     return statuses;
   }
