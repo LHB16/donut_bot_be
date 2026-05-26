@@ -1,7 +1,7 @@
 {
-  "host": "donutsmp.net",
+  "host": "",
   "port": 19132,
-  "username": ".lhbinh001",
-  "offline": false,
+  "username": "DonutAFKBot",
+  "offline": true,
   "version": ""
 }
