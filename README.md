@@ -7,13 +7,11 @@ Một dự án bot AFK chuyên nghiệp, ổn định dành riêng cho **Minecra
 ## ✨ Các Tính Năng Nổi Bật
 
 - **Giao diện Web UI Premium:** Giao diện điều khiển mượt mà phong cách Glassmorphism, đèn LED trạng thái động (Pulse Effect), thiết kế sang trọng, tối ưu trên cả máy tính và điện thoại.
-- **Anti-AFK & Giữ Bot Đứng Đúng 1 Chỗ:**
-  - **Xoay đầu định kỳ (Yaw/Pitch Rotation):** Bot sẽ tự động xoay nhẹ góc nhìn qua lại để đánh lừa cơ chế kiểm tra AFK của server, trong khi cơ thể vẫn đứng yên 100% tại chỗ.
-  - **Gửi tin nhắn / Lệnh định kỳ:** Gửi tin nhắn tự động (ví dụ: `.`, `/afk`) để reset bộ đếm AFK của máy chủ.
-- **Auto Reconnect Thông Minh:** Tự động kết nối lại khi server reset hoặc mất mạng. Chỉ dừng khi người dùng chủ động bấm **"Ngắt Kết Nối"** trên Web UI.
-- **Realtime Terminal Logs:** Đẩy logs và các tin nhắn chat trong game về giao diện Web thời gian thực thông qua kết nối WebSocket (Socket.io) cực nhanh.
-- **Trò Chuyện Trực Tiếp (Direct Chat):** Cho phép bạn gõ tin nhắn hoặc gửi các câu lệnh Minecraft (ví dụ: `/pay`, `/lobby`, `/tpa`) từ Web UI truyền thẳng vào máy chủ.
-- **Bảo Mật Tuyệt Đối (`WEB_PASSWORD`):** Bảo vệ Web điều khiển bằng mật khẩu để ngăn chặn người lạ can thiệp khi bạn deploy bot lên Render.com.
+- **Giữ Kết Nối Tối Giản & Siêu Ổn Định 24/7:** Duy trì online vĩnh viễn bằng cách phản hồi tự động gói tin latency đồng bộ với nhịp game của máy chủ. Bot đứng im hoàn toàn 100% tại chỗ (không di chuyển, không xoay camera tự động bất thường) để tránh bị anti-cheat hoặc quản trị viên phát hiện.
+- **Auto Reconnect Thông Minh:** Tự động kết nối lại sau 10 giây khi server restart hoặc gặp sự cố mạng. Chỉ ngắt hẳn khi bạn chủ động nhấn **"Ngắt kết nối"** trên Web UI.
+- **Làm Sạch Log Chat Tự Động:** Tự động loại bỏ các mã màu định dạng của Minecraft (các ký hiệu bắt đầu bằng `§`), hiển thị log chat và log hệ thống dạng plain text sạch sẽ, trực quan.
+- **Realtime Terminal Logs & Trò Chuyện Trực Tiếp:** Nhận log chat game theo thời gian thực và cho phép bạn trực tiếp gửi tin nhắn hoặc thực thi các câu lệnh Minecraft (ví dụ: `/msg`, `/lobby`, `/pay`, `/tpa`) từ Web UI vào server.
+- **Bảo Mật Tuyệt Đối (`WEB_PASSWORD`):** Bảo vệ bảng điều khiển Web UI bằng mật khẩu an toàn, ngăn chặn việc người lạ can thiệp khi bạn deploy bot lên các dịch vụ đám mây (như Render.com).
 
 ---
 
@@ -44,15 +42,18 @@ Chạy lệnh sau để khởi động dự án:
 ```bash
 npm start
 ```
-Màn hình console sẽ hiển thị:
-```text
-==================================================
- 🚀 Minecraft Bedrock AFK Bot Web Server đang chạy!
- 🌐 Web UI: http://localhost:3000
- 🔒 Chế độ bảo mật: BẬT (Mật khẩu được yêu cầu)
-==================================================
-```
-Mở trình duyệt và truy cập `http://localhost:3000` để bắt đầu cấu hình và điều khiển bot!
+
+> [!IMPORTANT]
+> **Nhắc nhở quan trọng về đường dẫn đăng nhập:**
+> Sau khi chạy lệnh khởi động, hãy **quan sát trực tiếp trong màn hình Console (Terminal)**. Hệ thống sẽ in ra địa chỉ truy cập Web UI và trạng thái bảo mật:
+> ```text
+> ==================================================
+>  🚀 Minecraft Bedrock AFK Bot Web Server đang chạy!
+>  🌐 Web UI: http://localhost:3000
+>  🔒 Chế độ bảo mật: BẬT (Mật khẩu được yêu cầu)
+> ==================================================
+> ```
+> Bạn chỉ cần click trực tiếp vào đường dẫn hiển thị ở Console hoặc truy cập trình duyệt tại địa chỉ `http://localhost:3000` (hoặc cổng mà bạn cấu hình trong biến môi trường `PORT`) để bắt đầu điều khiển bot!
 
 ---
 
