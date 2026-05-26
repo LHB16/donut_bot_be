@@ -4,7 +4,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const fs = require('fs');
-const BotManager = require('./bot-manager');
+const { fork } = require('child_process');
 
 const app = express();
 const server = http.createServer(app);
@@ -67,19 +67,75 @@ function logToConsole(logObj) {
   console.log(`${timestamp} ${colorPrefix} ${message}`);
 }
 
-const botManager = new BotManager(botConfig, (logObj) => {
-  // Callback ghi log nhận từ BotManager
-  logBuffer.push(logObj);
-  if (logBuffer.length > maxLogBuffer) {
-    logBuffer.shift(); // Xóa log cũ nhất nếu vượt quá giới hạn buffer
-  }
+let botWorker = null;
+let currentBotStatus = 'offline';
 
-  // Ghi ra Node.js console
-  logToConsole(logObj);
+// Hàm khởi tạo và quản lý tiến trình con chạy bot
+function startBotWorker() {
+  if (botWorker) return botWorker;
 
-  // Phát log realtime tới các client Socket.io đã xác thực
-  io.to('authenticated').emit('log', logObj);
-});
+  botWorker = fork(path.join(__dirname, 'bot-worker.js'));
+
+  // Lắng nghe các tin nhắn IPC truyền từ tiến trình con
+  botWorker.on('message', (msg) => {
+    if (!msg || typeof msg !== 'object') return;
+
+    switch (msg.type) {
+      case 'log':
+        logBuffer.push(msg.logObj);
+        if (logBuffer.length > maxLogBuffer) {
+          logBuffer.shift();
+        }
+        logToConsole(msg.logObj);
+        io.to('authenticated').emit('log', msg.logObj);
+        break;
+
+      case 'status':
+        currentBotStatus = msg.status;
+        io.to('authenticated').emit('status', msg.status);
+        break;
+
+      case 'msa_code':
+        io.to('authenticated').emit('msa_code', msg.data);
+        break;
+    }
+  });
+
+  // Lắng nghe khi tiến trình con thoát để dọn dẹp tài nguyên
+  botWorker.on('exit', (code, signal) => {
+    botWorker = null;
+    currentBotStatus = 'offline';
+    io.to('authenticated').emit('status', 'offline');
+
+    const logObj = {
+      timestamp: new Date().toLocaleTimeString(),
+      message: '[System] Tiến trình Bot con đã dừng hoạt động. Giải phóng tài nguyên RAM.',
+      type: 'warning'
+    };
+    logBuffer.push(logObj);
+    if (logBuffer.length > maxLogBuffer) {
+      logBuffer.shift();
+    }
+    logToConsole(logObj);
+    io.to('authenticated').emit('log', logObj);
+  });
+
+  botWorker.on('error', (err) => {
+    const logObj = {
+      timestamp: new Date().toLocaleTimeString(),
+      message: `[System] Lỗi xảy ra ở tiến trình Bot con: ${err.message}`,
+      type: 'error'
+    };
+    logBuffer.push(logObj);
+    if (logBuffer.length > maxLogBuffer) {
+      logBuffer.shift();
+    }
+    logToConsole(logObj);
+    io.to('authenticated').emit('log', logObj);
+  });
+
+  return botWorker;
+}
 
 // Phục vụ tệp tĩnh trong thư mục public
 app.use(express.static(path.join(__dirname, 'public')));
@@ -117,27 +173,35 @@ io.on('connection', (socket) => {
   // Gửi trạng thái ban đầu của server và bot cho client vừa kết nối
   socket.emit('init', {
     hasPassword: WEB_PASSWORD !== '', // Báo cho client biết server có cài mật khẩu hay không
-    botStatus: botManager.status,
-    botConfig: botManager.config,
+    botStatus: currentBotStatus,
+    botConfig: botConfig,
     logs: logBuffer
   });
 
   // Xử lý sự kiện khi người dùng yêu cầu BẮT ĐẦU KẾT NỐI Bot vào game
   socket.on('start_bot', () => {
-    if (botManager.status === 'offline') {
-      botManager.connect();
+    if (currentBotStatus === 'offline') {
+      currentBotStatus = 'connecting';
+      io.to('authenticated').emit('status', 'connecting');
+      const worker = startBotWorker();
+      worker.send({ type: 'start', config: botConfig });
     }
   });
 
   // Xử lý sự kiện khi người dùng yêu cầu NGẮT KẾT NỐI Bot khỏi game
   socket.on('stop_bot', () => {
-    botManager.disconnect();
+    if (botWorker) {
+      botWorker.send({ type: 'stop' });
+    } else if (currentBotStatus !== 'offline') {
+      currentBotStatus = 'offline';
+      io.to('authenticated').emit('status', 'offline');
+    }
   });
 
   // Xử lý sự kiện gửi tin nhắn chat thủ công từ Web UI
   socket.on('send_chat', (message) => {
-    if (message && botManager.status === 'online') {
-      botManager.sendChatMessage(message);
+    if (message && currentBotStatus === 'online' && botWorker) {
+      botWorker.send({ type: 'send_chat', message });
     }
   });
 
@@ -148,9 +212,22 @@ io.on('connection', (socket) => {
     const success = saveBotConfig(botConfig);
     
     if (success) {
-      botManager.updateConfig(botConfig);
+      if (botWorker) {
+        botWorker.send({ type: 'update_config', config: botConfig });
+      }
       socket.emit('config_saved', { success: true, config: botConfig });
-      botManager.log('Cấu hình bot đã được cập nhật thành công từ Web UI!', 'success');
+      
+      const logObj = {
+        timestamp: new Date().toLocaleTimeString(),
+        message: 'Cấu hình bot đã được cập nhật thành công từ Web UI!',
+        type: 'success'
+      };
+      logBuffer.push(logObj);
+      if (logBuffer.length > maxLogBuffer) {
+        logBuffer.shift();
+      }
+      logToConsole(logObj);
+      io.to('authenticated').emit('log', logObj);
     } else {
       socket.emit('config_saved', { success: false, message: 'Không thể lưu cấu hình xuống ổ đĩa!' });
     }
@@ -161,15 +238,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// Lắng nghe sự thay đổi trạng thái của Bot để đẩy về Web UI
-botManager.on('statusChange', (newStatus) => {
-  io.to('authenticated').emit('status', newStatus);
-});
-
-// Lắng nghe sự kiện msaCode để gửi về Web UI
-botManager.on('msaCode', (data) => {
-  io.to('authenticated').emit('msa_code', data);
-});
+// Đã di chuyển lắng nghe sự thay đổi trạng thái và msaCode qua IPC trong startBotWorker
 
 // Chạy server lắng nghe cổng cấu hình - bind 0.0.0.0 để Render/PaaS route traffic từ bên ngoài
 server.listen(PORT, '0.0.0.0', () => {
