@@ -1,7 +1,8 @@
 {
-  "host": "",
+  "host": "donutsmp.net",
   "port": 19132,
-  "username": "DonutAFKBot",
-  "offline": true,
-  "version": ""
+  "username": ".lhbinh001",
+  "offline": false,
+  "version": "",
+  "autoCommand": "/afk 31"
 }

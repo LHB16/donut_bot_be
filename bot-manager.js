@@ -149,6 +149,16 @@ class BotManager extends EventEmitter {
         
         // Luôn khởi động keep-alive cơ bản để giữ kết nối ổn định
         this.startKeepAlive();
+
+        // Tự động chạy lệnh afk/teleport sau 1.5 giây nếu được cấu hình
+        if (this.config.autoCommand && this.config.autoCommand.trim() !== '') {
+          setTimeout(() => {
+            if (this.status === 'online' && this.isSpawned) {
+              this.log(`[Tự động]: Gửi lệnh khởi động AFK: ${this.config.autoCommand}`, 'info');
+              this.sendChatMessage(this.config.autoCommand);
+            }
+          }, 1500);
+        }
       });
 
       // Tự động phản hồi gói tin network_stack_latency để tránh bị hệ thống bảo mật kick
@@ -172,22 +182,7 @@ class BotManager extends EventEmitter {
         }
       });
 
-      // 4. Lắng nghe cập nhật vị trí từ server để bám sát vị trí thực tế của Bot
-      this.client.on('move_player', (packet) => {
-        // Chỉ cập nhật nếu gói tin này áp dụng cho chính Bot của chúng ta
-        if (this.runtimeEntityId && packet.runtime_id === this.runtimeEntityId) {
-          this.position = {
-            x: packet.position.x,
-            y: packet.position.y,
-            z: packet.position.z
-          };
-          this.rotation = {
-            pitch: packet.pitch,
-            yaw: packet.yaw,
-            headYaw: packet.head_yaw || packet.yaw
-          };
-        }
-      });
+      // 4. Đã vô hiệu hóa listener move_player để tránh làm nghẽn Node.js Event Loop tại khu Spawn đông người
 
       // 5. Lắng nghe tin nhắn chat từ server
       this.client.on('text', (packet) => {

@@ -34,7 +34,8 @@ function loadBotConfig() {
     host: "",
     port: 19132,
     username: "DonutAFKBot",
-    offline: true
+    offline: true,
+    autoCommand: "/afk 31"
   };
 }
 

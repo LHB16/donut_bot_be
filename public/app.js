@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const usernameInput = document.getElementById('username');
 
   const versionInput = document.getElementById('version');
+  const autoCommandInput = document.getElementById('auto-command');
 
   const btnConnect = document.getElementById('btn-connect');
   const btnDisconnect = document.getElementById('btn-disconnect');
@@ -114,6 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
         usernameInput.value = botConfig.username || 'DonutAFKBot';
 
         versionInput.value = botConfig.version || '';
+        autoCommandInput.value = botConfig.autoCommand || '';
       }
 
       // 3. Cập nhật Trạng thái UI của Bot
@@ -209,6 +211,9 @@ document.addEventListener('DOMContentLoaded', () => {
       statusText.textContent = 'Đang Online';
       statusText.style.color = '#10b981';
 
+      // Tự động ẩn banner MSA khi bot online thành công
+      hideMsaAlert();
+
       // Điều khiển Nút bấm
       btnConnect.disabled = true;
       btnDisconnect.disabled = false;
@@ -300,7 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
       offline: offlineSelect.value === 'true',
       username: usernameInput.value.trim(),
       version: versionInput.value.trim(),
-
+      autoCommand: autoCommandInput.value.trim(),
     };
 
     socket.emit('save_config', newConfig);
